@@ -13,16 +13,36 @@ export default function App() {
   }
 
   function handlePackedItems() {
-    const checkedItems = items.map((item) => ({
-      ...item,
-      input: item.input,
-    }));
+    const updatedItems = items.map((item) => {
+      if (item.packed) {
+        return item;
+      }
+      return {
+        ...item,
+        packed: true,
+      };
+    });
 
-    setItems(checkedItems);
+    setItems(updatedItems);
+  }
+
+  function handleUnpackedItems() {
+    const updatedItems = items.map((item) => {
+      if (!item.packed) {
+        return item;
+      }
+      return {
+        ...item,
+        packed: false,
+      };
+    });
+
+    setItems(updatedItems);
   }
 
   function handleAddItems(item) {
     setItems((items) => [...items, item]);
+    console.log(item);
   }
 
   function handleDeleteItems(id) {
@@ -30,7 +50,10 @@ export default function App() {
   }
 
   function handleClearItems() {
-    setItems([]);
+    const confirmation = window.confirm(
+      "Are you sure you want to clear the list?"
+    );
+    confirmation && setItems([]);
   }
 
   return (
@@ -43,16 +66,18 @@ export default function App() {
         onToggleItem={handleToggleItem}
         onClearItems={handleClearItems}
         onPackedItems={handlePackedItems}
+        onUnpackedItems={handleUnpackedItems}
       />
-      <Stats />
+      <Stats items={items} />
     </div>
   );
 }
 
 function Title() {
   return (
-    <div>
+    <div className="title">
       <h1>✒️ PersoNote 🚀</h1>
+      <span>Capturing Goals, One Note at a Time</span>
     </div>
   );
 }
@@ -98,11 +123,32 @@ function NoteItems({
   onToggleItem,
   onClearItems,
   onPackedItems,
+  onUnpackedItems,
 }) {
+  const [sortBy, setSortBy] = useState("input");
+
+  let sortedItems;
+
+  if (sortBy === "input") {
+    sortedItems = items;
+  }
+
+  if (sortBy === "date") {
+    sortedItems = items
+      .slice()
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+  }
+
+  if (sortBy === "marked") {
+    sortedItems = items
+      .slice()
+      .sort((a, b) => Number(a.packed) - Number(b.packed));
+  }
+
   return (
     <div className="list">
       <ul>
-        {items.map((item) => (
+        {sortedItems.map((item) => (
           <Item
             item={item}
             onDeleteItems={onDeleteItems}
@@ -112,10 +158,13 @@ function NoteItems({
         ))}
       </ul>
       <div className="actions">
-        <select>
-          <option>akdwo</option>
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+          <option value="input">Sort by input order</option>
+          {/* <option value="date">Sort by date</option> on Maintenance */}
+          <option value="marked">Sort by marked status</option>
         </select>
         <button onClick={() => onPackedItems()}>Mark All Items</button>
+        <button onClick={() => onUnpackedItems()}>Unmark All Items</button>
         <button onClick={() => onClearItems()}>Clear Items</button>
       </div>
     </div>
@@ -125,11 +174,13 @@ function NoteItems({
 function Item({ item, onDeleteItems, onToggleItem }) {
   return (
     <li>
-      <input
-        type="checkbox"
-        value={item.packed}
-        onChange={() => onToggleItem(item.id)}
-      />
+      {item.packed === false && (
+        <input
+          type="checkbox"
+          value={item.packed}
+          onChange={() => onToggleItem(item.id)}
+        />
+      )}
       <span style={item.packed ? { textDecoration: "line-through" } : {}}>
         {item.date} {item.note}
       </span>
@@ -138,6 +189,26 @@ function Item({ item, onDeleteItems, onToggleItem }) {
   );
 }
 
-function Stats() {
-  return <div className="stats"></div>;
+function Stats({ items }) {
+  if (!items.length) {
+    return (
+      <footer className="stats">
+        <em>Try to add some goals into your list 🏁 </em>
+      </footer>
+    );
+  }
+
+  const numItems = items.length;
+  const numPacked = items.filter((item) => item.packed).length;
+  const percentage = Math.round((numPacked / numItems) * 100);
+
+  return (
+    <footer className="stats">
+      <em>
+        {percentage === 100
+          ? "🎇 Congrats!! You've beat all of your tasks 🎇 "
+          : `📌 You've done (${percentage}%) ${numPacked} task from ${numItems} tasks, keep it up you can do it! 🎏`}
+      </em>
+    </footer>
+  );
 }
